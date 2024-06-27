@@ -1,0 +1,180 @@
+import random
+
+
+# Класс для представления персонажей (бойцов и заключенного)
+class Character:
+    def __init__(self, name, health):
+        self.name = name
+        self.health = health
+
+    def attack(self):
+        return random.randint(10, 20)
+
+    def is_alive(self):
+        return self.health > 0
+
+# Класс для представления бойцов, наследуется от персонажа
+class Fighter(Character):
+    def __init__(self, name, health):
+        super().__init__(name, health)
+        self.aptechki = 2 + (1 if random.random() < 0.3 else 0)  # Вероятность дополнительных аптечек 30%
+        self.defibrillator_uses = 2
+        self.has_thermal_imager = False  # Изначально тепловизора нет
+        self.thermal_imager_uses = 0
+        self.detect_more_items = False
+        self.extra_defibrillators = 0
+
+    def special_attack(self):
+        return random.randint(15, 25)
+
+    def dodge(self):
+        return random.random() < 0.3  # 30% шанс уклониться от мгновенного убийства
+
+    def use_aptechka(self):
+        if self.health < 40 and self.aptechki > 0:
+            self.health += 30
+            self.aptechki -= 1
+            print(f"{self.name} использует аптечку и восстанавливает 30 здоровья.")
+        else:
+            print(f"{self.name} не может использовать аптечку.")
+
+    def use_defibrillator(self, dead_fighter):
+        if self.defibrillator_uses > 0 and not dead_fighter.is_alive():
+            if random.random() < 0.8:  # 80% шанс, что дефибриллятор сработает
+                dead_fighter.health = 50
+                print(f"{self.name} использует дефибриллятор и воскрешает {dead_fighter.name} с 50 здоровья.")
+            else:
+                print(f"{self.name} использует дефибриллятор, но он сломался!")
+            self.defibrillator_uses -= 1
+        else:
+            print(f"{self.name} не может использовать дефибриллятор.")
+
+    def use_thermal_imager(self):
+        if self.has_thermal_imager and self.thermal_imager_uses > 0:
+            self.thermal_imager_uses -= 1
+            print(f"{self.name} использует тепловизор для обнаружения Прячущегося.")
+            return True
+        else:
+            print(f"{self.name} не может использовать тепловизор.")
+            return False
+
+    def transfer_thermal_imager(self, target_fighter):
+        if self.has_thermal_imager:
+            self.has_thermal_imager = False
+            target_fighter.has_thermal_imager = True
+            target_fighter.thermal_imager_uses = 1
+            print(f"{self.name} передает тепловизор {target_fighter.name}.")
+        else:
+            print(f"{self.name} не имеет тепловизор для передачи.")
+
+# Класс для представления заключенного, наследуется от персонажа
+class Prisoner(Character):
+    def __init__(self, name, health):
+        super().__init__(name, health)
+
+    def special_attack(self):
+        return random.randint(20, 30)
+
+    def lethal_attack(self):
+        return random.randint(40, 60)  # Разрывающая атака
+
+    def instant_kill(self):
+        return random.random() < 0.1  # 10% шанс на мгновенное убийство (Приколол)
+
+    def emit_sound(self):
+        return random.random() < 0.1  # 10% шанс издать звук
+
+    def capture(self):
+        return random.random() < 0.6  # 60% шанс захватить игрока
+
+    def break_detection_item(self):
+        return random.random() < 0.2  # 20% шанс сломать одну из вещей для обнаружения
+
+def main():
+    fighters = [
+        Fighter("Боец 1", 100),
+        Fighter("Боец 2", 100),
+        Fighter("Боец 3", 100),
+        Fighter("Боец 4", 100)
+    ]
+
+    prisoner = Prisoner("Прячущийся", 150)
+
+    print("Добро пожаловать в игру: Поймайте Прячущегося!")
+    print("Вы - команда из 4 бойцов, пытающаяся поймать Прячущегося.")
+    print("Будьте осторожны! Прячущийся может разорвать любого бойца, убить мгновенно (Приколол), или издать звук, заставляющий бойца отбежать, чтобы избежать смерти.")
+    print("Вы можете использовать световую гранату, чтобы застынуть Прячущегося на 7 секунд и сделать его частично видимым.")
+    print("У каждого бойца есть 2-3 аптечки и 1 дефибриллятор, который можно использовать два раза.")
+    print("Один из бойцов будет случайно выбран для использования тепловизора каждый раунд.")
+
+    round_number = 1
+    motion_sensor_uses = 5
+    motion_sensor_recharge = 0
+    flashbang_uses = 3
+    prisoner_visible = False
+    prisoner_stunned_rounds = 0
+
+    while True:
+        print(f"\n--- Раунд {round_number} ---")
+        round_number += 1
+
+        if prisoner_stunned_rounds > 0:
+            prisoner_stunned_rounds -= 1
+            if prisoner_stunned_rounds == 0:
+                prisoner_visible = False
+                print("Прячущийся больше не виден.")
+
+        # Выбор случайного бойца для тепловизора
+        thermal_imager_fighter = random.choice(fighters)
+        thermal_imager_fighter.has_thermal_imager = True
+        thermal_imager_fighter.thermal_imager_uses = 3
+        print(f"{thermal_imager_fighter.name} получает тепловизор на этот раунд.")
+
+        # Атака заключенного на случайного бойца
+        if prisoner_stunned_rounds == 0:
+            target_fighter = random.choice(fighters)
+            if prisoner.emit_sound():
+                print("Прячущийся издает зловещий звук!")
+                response = input(f"{target_fighter.name}, у вас есть шанс отбежать! Нажмите 'б' чтобы отбежать: ")
+                if response.lower() == 'б':
+                    print(f"{target_fighter.name} успел отбежать и избежал мгновенной смерти.")
+                else:
+                    if target_fighter.dodge():
+                        print(f"{target_fighter.name} уклонился и избежал мгновенной смерти.")
+                    else:
+                        print(f"{target_fighter.name} не успел отбежать и мгновенно умер!")
+                        target_fighter.health = 0
+            elif prisoner.instant_kill():  # Шанс на мгновенное убийство
+                print(f"Прячущийся использует Приколол и мгновенно убивает {target_fighter.name}!")
+                if not target_fighter.dodge():
+                    target_fighter.health = 0
+                else:
+                    print(f"{target_fighter.name} уклонился от мгновенного убийства!")
+            elif prisoner.capture():  # Шанс на захват
+                print(f"Прячущийся захватывает {target_fighter.name} и наносит 20 урона!")
+                target_fighter.health -= 20
+            else:
+                if random.random() < 0.3:  # 30% шанс на разрывающую атаку
+                    prisoner_damage = prisoner.lethal_attack()
+                    print(f"Прячущийся разрывает {target_fighter.name} на куски, нанося {prisoner_damage} урона!")
+                else:
+                    prisoner_damage = prisoner.attack()
+                    print(f"Прячущийся атакует {target_fighter.name} на {prisoner_damage} урона.")
+                target_fighter.health -= prisoner_damage
+
+            # Шанс сломать одну из вещей для обнаружения
+            if prisoner.break_detection_item():
+                detection_items = ["датчик движения", "световую гранату", "тепловизор"]
+                broken_item = random.choice(detection_items)
+                if broken_item == "датчик движения" and motion_sensor_uses > 0:
+                    motion_sensor_uses = 0
+                    print(f"Прячущийся ломает {broken_item}!")
+                elif broken_item == "световую гранату" and flashbang_uses > 0:
+                    flashbang_uses = 0
+                    print(f"Прячущийся ломает {broken_item}!")
+                elif broken_item == "тепловизор" and thermal_imager_fighter.thermal_imager_uses > 0:
+                    thermal_imager_fighter.thermal_imager_uses = 0
+                    print(f"Прячущийся ломает {broken_item} у {thermal_imager_fighter.name}!")
+
+        # Проверяем, не погиб ли боец
+        dead_fighters = [fighter for fighter in fighters if not fighter.is_alive()]
